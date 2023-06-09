@@ -30,6 +30,7 @@ mongoose.connect("mongodb://localhost:27017/userDB");
 const userSchema = new mongoose.Schema({
   email: String,
   password: String,
+  secret: String,
   // googleId: String,
 });
 
@@ -75,6 +76,37 @@ app.get("/", (req, res) => {
   res.render("home");
 });
 
+app.get("/submit", (req, res) => {
+  if (req.isAuthenticated()) {
+    res.render("submit");
+  } else {
+    res.redirect("/login");
+  }
+});
+
+app.post("/submit", (req, res) => {
+  User.findById(req.user.id)
+    .then((foundUser) => {
+      if (foundUser) {
+        foundUser.secret = req.body.secret;
+        foundUser.save().then(() => {
+          res.redirect("/secrets");
+        });
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+});
+
+app.get("/secrets", (req, res) => {
+  User.find({ secret: { $ne: null } }).then((foundUser) => {
+    if (foundUser) {
+      res.render("secrets", { usersWithSecrets: foundUser });
+    }
+  });
+});
+
 app.get(
   "/auth/google",
   passport.authenticate("google", { scope: ["profile", "email"] })
@@ -97,14 +129,6 @@ app.get("/register", (req, res) => {
   res.render("register");
 });
 
-app.get("/secrets", (req, res) => {
-  if (req.isAuthenticated()) {
-    res.render("secrets");
-  } else {
-    res.redirect("/login");
-  }
-});
-
 app.get("/logout", (req, res) => {
   req.logout((err) => {
     if (err) {
@@ -114,6 +138,14 @@ app.get("/logout", (req, res) => {
     }
   });
 });
+
+// app.get("/secrets", (req, res) => {
+//   if (req.isAuthenticated()) {
+//     res.render("secrets");
+//   } else {
+//     res.redirect("/login");
+//   }
+// });
 
 app.post("/register", (req, res) => {
   User.register({ username: req.body.username }, req.body.password)
